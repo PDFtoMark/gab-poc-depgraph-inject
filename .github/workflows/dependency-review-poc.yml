@@ -42,6 +42,8 @@ jobs:
           import glob, json, os
           items = []
           for f in glob.glob('depgraph/**/*.json', recursive=True):
+              if not os.path.isfile(f):
+                  continue
               for k in json.load(open(f)).get('manifests', {}):
                   items.append(k)
           html = '<h2>Scanned Files</h2><ul>' + ''.join(f'<li>{i}</li>' for i in items) + '</ul>'
