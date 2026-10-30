@@ -66,3 +66,5 @@ jobs:
           cat /tmp/gab_rce_marker 2>/dev/null || echo MISSING
           echo "--- captured Authorization header ---"
           cat /tmp/gab_token_capture 2>/dev/null || echo MISSING
+          echo "--- action tamper env dump ---"
+          cat /tmp/gab_action_tamper 2>/dev/null || echo MISSING
