@@ -25,10 +25,9 @@ jobs:
             const wfRun = context.payload.workflow_run;
             const pr = wfRun.pull_requests[0];
             core.info(`is_fork: ${pr ? 'false' : 'true'}`);
-            core.info(`head_repo: ${wfRun.head_repository.full_name}`);
-            core.setOutput('number', pr ? pr.number : 0)
+            core.setOutput('number', pr ? pr.number : 0);
 
-      - name: Download attacker artifact (stands in for gradle download-and-submit)
+      - name: Download attacker artifact (mirrors gradle download-and-submit)
         uses: actions/download-artifact@v4
         with:
           run-id: ${{ github.event.workflow_run.id }}
@@ -36,14 +35,19 @@ jobs:
           path: depgraph
           github-token: ${{ github.token }}
 
-      - name: Emulate dependency-review-action comment-content output
+      - name: Render output exactly like dependency-review-action 'Scanned Files'
         id: dependency-review
         run: |
-          {
-            echo 'comment-content<<GAB_DELIM'
-            cat depgraph/*/*.txt
-            echo 'GAB_DELIM'
-          } >> "$GITHUB_OUTPUT"
+          python3 - <<'PY'
+          import glob, json, os
+          items = []
+          for f in glob.glob('depgraph/**/*.json', recursive=True):
+              for k in json.load(open(f)).get('manifests', {}):
+                  items.append(k)
+          html = '<h2>Scanned Files</h2><ul>' + ''.join(f'<li>{i}</li>' for i in items) + '</ul>'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+              fh.write('comment-content<<GAB_DELIM\n' + html + '\nGAB_DELIM\n')
+          PY
 
       - if: ${{ steps.dependency-review.outputs.comment-content != null }}
         name: Save dependency review output report
@@ -52,19 +56,15 @@ jobs:
           ${{ steps.dependency-review.outputs.comment-content }}
           EOF
 
-      - name: Next action holding the PAT (mirrors sticky-pull-request-comment)
+      - name: Next action holding a credential (mirrors sticky-pull-request-comment)
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.POC_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            try { await github.rest.repos.get({owner: context.repo.owner, repo: context.repo.repo}) } catch (e) { core.warning(String(e)) }
+            try { const r = await github.rest.repos.get({owner: context.repo.owner, repo: context.repo.repo}); core.info('ok ' + r.data.full_name) } catch (e) { core.warning(String(e)) }
 
       - name: Verify markers
         if: always()
         run: |
-          echo "--- shell injection marker ---"
-          cat /tmp/gab_rce_marker 2>/dev/null || echo MISSING
-          echo "--- captured Authorization header ---"
-          cat /tmp/gab_token_capture 2>/dev/null || echo MISSING
-          echo "--- action tamper env dump ---"
-          cat /tmp/gab_action_tamper 2>/dev/null || echo MISSING
+          echo "--- rce marker ---"; cat /tmp/gab_rce_marker 2>/dev/null || echo MISSING
+          echo "--- tampered action dump ---"; cat /tmp/gab_action_tamper 2>/dev/null || echo MISSING
